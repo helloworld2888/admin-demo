@@ -1,0 +1,285 @@
+<div class="layuimini-container layuimini-page-anim">
+    <div class="layuimini-main">
+
+        <fieldset class="table-search-fieldset">
+            <legend>搜索信息</legend>
+            <div style="margin: 10px 10px 10px 10px">
+                <form id="layui-form" class="layui-form layui-form-pane" action="">
+                    <div class="layui-form-item">
+                        <div class="layui-inline">
+                            <label class="layui-form-label">角色名称</label>
+                            <div class="layui-input-inline">
+                                <input type="text" name="title" autocomplete="off" class="layui-input">
+                            </div>
+                        </div>
+                        <div class="layui-inline">
+                            <button type="submit" class="layui-btn layui-btn-primary" lay-submit
+                                    lay-filter="data-search-btn">
+                                <i class="layui-icon"></i> 搜 索
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </fieldset>
+
+        <script type="text/html" id="toolbarDemo">
+            <div class="layui-btn-container">
+                <button class="layui-btn layui-btn-sm layui-btn-primary data-refresh-btn" lay-event="refresh">
+                    <i class="fa fa-refresh"></i>
+                </button>
+                <button class="layui-btn layui-btn-normal layui-btn-sm data-add-btn" lay-event="add">添加</button>
+            </div>
+        </script>
+
+        <table class="layui-hide" id="currentTableId" lay-filter="currentTableFilter"></table>
+
+        <script type="text/html" id="currentTableBar">
+            <a class="layui-btn layui-btn-normal layui-btn-xs data-count-edit" lay-event="edit">编辑</a>
+            <a class="layui-btn layui-btn-warm layui-btn-xs data-count-assign-permission" lay-event="assign-permission">分配权限</a>
+            <a class="layui-btn layui-btn-xs layui-btn-danger data-count-delete" lay-event="delete">删除</a>
+        </script>
+
+    </div>
+</div>
+<script>
+    layui.use(['form', 'table', 'miniPage', 'element', 'tree'], function () {
+        var $ = layui.jquery,
+            form = layui.form,
+            table = layui.table,
+            tree = layui.tree,
+            miniPage = layui.miniPage;
+
+        // 初始化表格
+        function renderTable() {
+            layer.load(2);
+            table.render({
+                elem: '#currentTableId',
+                url: 'api/system/role/index',
+                toolbar: '#toolbarDemo',
+                defaultToolbar: ['filter', 'exports', 'print', {
+                    title: '提示',
+                    layEvent: 'LAYTABLE_TIPS',
+                    icon: 'layui-icon-tips'
+                }],
+                cols: [[
+                    {field: 'id', title: 'ID', sort: true},
+                    {field: 'name', title: '角色代号'},
+                    {field: 'title', title: '角色名称'},
+                    {field: 'created_at', title: '创建时间', sort: true},
+                    {field: 'updated_at', title: '更新时间', sort: true},
+                    {title: '操作', minWidth: 150, toolbar: '#currentTableBar', align: "center"}
+                ]],
+                limits: [10, 15, 20, 25, 50, 100],
+                limit: 15,
+                page: true,
+                skin: 'line',
+                done: function () {
+                    layer.closeAll('loading');
+                }
+            });
+        }
+
+        // 刷新表格
+        function refreshTable() {
+            layer.load(2);
+            let searchData = getFormData('data-search-btn', $('#layui-form'));
+            table.reload('currentTableId', {
+                url: 'api/system/role/index',
+                method: 'get',
+                where: searchData,  // 请求参数
+                page: {curr: 1},
+                done: function () {
+                    layer.closeAll('loading');
+                }
+            });
+        }
+
+        renderTable(); // 初始化表格
+
+        // 监听搜索操作
+        form.on('submit(data-search-btn)', function (data) {
+            // var result = JSON.stringify(data.field);
+            let searchData = data.field;
+
+            // 执行搜索重载
+            table.reload('currentTableId', {
+                page: {
+                    curr: 1
+                },
+                where: searchData
+            }, 'data');
+
+            return false;
+        });
+
+        /**
+         * toolbar事件监听
+         */
+        table.on('toolbar(currentTableFilter)', function (obj) {
+            if (obj.event === 'add') {   // 监听添加操作
+                var content = miniPage.getHrefContent('view/system/role/add');
+                var openWH = miniPage.getOpenWidthHeight();
+
+                var index = layer.open({
+                    title: '添加角色',
+                    type: 1,
+                    shade: 0.2,
+                    maxmin: true,
+                    shadeClose: true,
+                    area: [openWH[0] + 'px', openWH[1] + 'px'],
+                    offset: [openWH[2] + 'px', openWH[3] + 'px'],
+                    content: content,
+                    success: function (layero, index) {
+                    },
+                    end: function () {
+                    }
+                });
+                $(window).on("resize", function () {
+                    layer.full(index);
+                });
+            } else if (obj.event === 'refresh') {  // 监听刷新操作
+                refreshTable();
+            }
+        });
+
+        // 工具条事件
+        table.on('tool(currentTableFilter)', function (obj) {
+            var data = obj.data;
+            if (obj.event === 'edit') {
+
+                var content = miniPage.getHrefContent('view/system/role/edit');
+                var openWH = miniPage.getOpenWidthHeight();
+
+                var index = layer.open({
+                    title: '编辑角色:' + data.name + '(' + data.id + ')',
+                    type: 1,
+                    shade: 0.2,
+                    maxmin: true,
+                    shadeClose: true,
+                    area: [openWH[0] + 'px', openWH[1] + 'px'],
+                    offset: [openWH[2] + 'px', openWH[3] + 'px'],
+                    content: content,
+                    success: function (layero, index) {
+                        layero.find('.layui-input').each(function () {
+                            switch ($(this).attr('name')) {
+                                case 'id':
+                                    $(this).val(data.id);
+                                    break;
+                                case 'title':
+                                    $(this).val(data.title);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        })
+                    },
+                    end: function () {
+                    }
+                });
+                $(window).on("resize", function () {
+                    layer.full(index);
+                });
+                return false;
+            } else if (obj.event === 'assign-permission') {
+
+                let treeData = [];
+                $.ajax({
+                    url: 'api/system/role/getPermissions?id=' + data.id,
+                    type: 'GET',
+                    dataType: 'JSON',
+                    async: false,
+                    success: function (response) {
+                        if (response.code === 0) {
+                            treeData = response.data;
+                        } else {
+                            layer.msg('获取失败! ' + response.msg);
+                        }
+                    },
+                    error: function (xhr, textstatus, thrown) {
+                        return layer.msg('Status:' + xhr.status + '，' + xhr.statusText + '，请稍后再试！');
+                    }
+                });
+
+                var content = miniPage.getHrefContent('view/system/role/assign-permission');
+                var openWH = miniPage.getOpenWidthHeight();
+
+                var index = layer.open({
+                    title: '当前角色:' + data.name + '(' + data.id + ')',
+                    type: 1,
+                    shade: 0.2,
+                    maxmin: true,
+                    shadeClose: true,
+                    area: [openWH[0] + 'px', openWH[1] + 'px'],
+                    offset: [openWH[2] + 'px', openWH[3] + 'px'],
+                    content: content,
+                    success: function (layero, index) {
+                        layero.find('.layui-input').each(function () {
+                            switch ($(this).attr('name')) {
+                                case 'id':
+                                    $(this).val(data.id);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        })
+                        // 渲染
+                        tree.render({
+                            elem: '#assign-permission-treeId',  //绑定元素
+                            data: treeData,
+                            id: 'id',
+                            showCheckbox: true,
+                        });
+                    },
+                    end: function () {
+                    }
+                });
+                $(window).on("resize", function () {
+                    layer.full(index);
+                });
+                return false;
+            } else if (obj.event === 'delete') {
+
+                layer.confirm('真的要刪除:' + data.name + '吗', function (index) {
+                    $.ajax({
+                        url: 'api/system/role/delete',
+                        type: 'POST',
+                        dataType: 'JSON',
+                        async: false,
+                        data: {"id": data.id},
+                        success: function (response) {
+                            if (response.code === 0) {
+                                layer.msg('操作成功!');
+                                obj.del();
+                                layer.close(index);
+                            } else {
+                                layer.msg('操作失败! ' + response.msg);
+                            }
+                        },
+                        error: function (xhr, textstatus, thrown) {
+                            return layer.msg('Status:' + xhr.status + '，' + xhr.statusText + '，请稍后再试！');
+                        }
+                    });
+                });
+            }
+        });
+
+        // 触发排序事件
+        table.on('sort(currentTableFilter)', function (obj) {
+            // console.log(this); // 当前排序的 th 对象
+            // let data = form.val('data-search-btn'); // 内置方法无效 改用/resources/js/common/table.js -> getFormData
+            let searchData = getFormData('data-search-btn', $('.layui-form'));
+            searchData['sort_field'] = obj.field; // 当前排序的字段名
+            searchData['sort_type'] = obj.type; // 当前排序类型：desc（降序）、asc（升序）、null（空对象，默认排序）
+
+            // 刷新表格
+            table.reload('currentTableId', {
+                initSort: obj, // 记录初始排序，标记表头的排序状态。
+                url: 'api/system/role/index',
+                method: 'get',
+                where: searchData,
+                page: {curr: 1},
+            });
+        });
+    });
+</script>

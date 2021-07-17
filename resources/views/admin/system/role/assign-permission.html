@@ -1,0 +1,87 @@
+<div class="layuimini-main">
+
+    <div class="layui-form layuimini-form">
+        <input type="hidden" name="id" value="" disabled class="layui-input">
+        <div class="layui-form-item">
+            <label class="layui-form-label required">分配权限</label>
+            <div class="layui-input-block">
+                <div id="assign-permission-treeId"></div>
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="saveBtn">确认保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    layui.use(['form', 'table', 'tree'], function () {
+        var form = layui.form,
+            layer = layui.layer,
+            table = layui.table,
+            tree = layui.tree,
+            $ = layui.$;
+
+        // 处理权限id
+        function handlePermissionIds(array) {
+            if (!array) {
+                return [];
+            }
+            let permissionIds = [];
+            for (let i in array) {
+                if (array[i]['children']) {
+                    let childrenIds = handlePermissionIds(array[i]['children']);
+                    permissionIds = permissionIds.concat(childrenIds);
+                }
+                permissionIds.push(array[i]['id']);
+            }
+            return permissionIds;
+        }
+
+        /**
+         * 初始化表单，要加上，不然刷新部分组件可能会不加载
+         */
+        form.render();
+
+        // 当前弹出层，防止ID被覆盖
+        var parentIndex = layer.index;
+
+        //监听提交
+        form.on('submit(saveBtn)', function (data) {
+            let checkData = tree.getChecked('id'); // 获得选中的节点
+            let permissionIds = handlePermissionIds(checkData);
+            permissionIds.sort();
+
+            $.ajax({
+                url: 'api/system/role/setPermissions',
+                type: 'POST',
+                dataType: 'JSON',
+                async: false,
+                data: {
+                    'id': data.field.id,
+                    'permissionIds': permissionIds
+                },
+                success: function (response) {
+                    if (response.code === 0) {
+                        layer.msg('操作成功!', {
+                            time: 1000 // 1秒关闭
+                        }, function () {
+                            layer.close(parentIndex);
+                            parent.layui.$('.data-refresh-btn').click(); // 父页面刷新表单
+                        });
+                    } else {
+                        layer.msg('操作失败! ' + response.msg);
+                    }
+                },
+                error: function (xhr, textstatus, thrown) {
+                    return layer.msg('Status:' + xhr.status + '，' + xhr.statusText + '，请稍后再试！');
+                }
+            });
+
+            return false;
+        });
+
+    });
+</script>

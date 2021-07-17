@@ -1,0 +1,100 @@
+<div class="layuimini-main">
+
+    <div class="layui-form layuimini-form">
+        <input type="hidden" name="id" value="0" disabled class="layui-input">
+        <input type="hidden" name="pid" value="" disabled class="layui-input">
+        <div class="layui-form-item">
+            <label class="layui-form-label required">权限名称</label>
+            <div class="layui-input-block">
+                <input type="text" name="title" lay-verify="required" lay-reqtext="权限名称不能为空" placeholder="请输入权限名称"
+                       value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">权限标识</label>
+            <div class="layui-input-block">
+                <input type="text" name="name" lay-verify="required" lay-reqtext="权限标识不能为空" placeholder="请输入权限标识"
+                       value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">类型</label>
+            <div class="layui-input-block">
+                <input type="radio" name="type" value="0" title="菜单" class="layui-input">
+                <input type="radio" name="type" value="1" title="按钮" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">图标样式</label>
+            <div class="layui-input-block">
+                <input type="text" name="icon" placeholder="请输入图标" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">链接</label>
+            <div class="layui-input-block">
+                <input type="text" name="href" placeholder="请输入链接" value="" class="layui-input">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label required">排序</label>
+            <div class="layui-input-block">
+                <input type="number" name="sort" lay-verify="required" lay-reqtext="排序不能为空" placeholder="请输入排序"
+                       value="0"
+                       class="layui-input">
+            </div>
+        </div>
+
+        <div class="layui-form-item">
+            <div class="layui-input-block">
+                <button class="layui-btn layui-btn-normal" lay-submit lay-filter="saveBtn">确认保存</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script>
+    layui.use(['form', 'table'], function () {
+        var form = layui.form,
+            layer = layui.layer,
+            table = layui.table,
+            $ = layui.$;
+
+        /**
+         * 初始化表单，要加上，不然刷新部分组件可能会不加载
+         */
+        form.render();
+
+        // 当前弹出层，防止ID被覆盖
+        var parentIndex = layer.index;
+
+        //监听提交
+        form.on('submit(saveBtn)', function (data) {
+            $.ajax({
+                url: 'api/system/permission/edit',
+                type: 'POST',
+                dataType: 'JSON',
+                async: false,
+                data: data.field,
+                success: function (response) {
+                    if (response.code === 0) {
+                        layer.msg('操作成功!', {
+                            time: 1000 // 1秒关闭
+                        }, function () {
+                            layer.close(parentIndex);
+                            parent.layui.$('.data-refresh-btn').click(); // 父页面刷新表单
+                        });
+                    } else {
+                        layer.msg('操作失败! ' + response.msg);
+                    }
+                },
+                error: function (xhr, textstatus, thrown) {
+                    return layer.msg('Status:' + xhr.status + '，' + xhr.statusText + '，请稍后再试！');
+                }
+            });
+
+            return false;
+        });
+
+    });
+</script>
